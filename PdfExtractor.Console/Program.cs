@@ -12,4 +12,10 @@ var extractor = new FlightExtractionService();
 
 var result = extractor.Extract(stream);
 
-Console.WriteLine($"Flights found: {result.Flights.Count}");
+foreach (var error in result.Errors)
+{
+    Console.WriteLine(
+        $"[{error.Code}] Page: {error.PageNumber}, " +
+        $"Flight: {error.FlightNumber}, Message: {error.Message}"
+    );
+}
