@@ -17,7 +17,17 @@ namespace PdfExtractor.Services
         {
             var flightGroup = new FlightGroup();
 
-            var pages = _pdfReader.Read(pdfStream);
+            List<PdfPageContent> pages;
+
+            try
+            {
+                pages = _pdfReader.Read(pdfStream);
+            }
+            catch (Exception ex)
+            {
+                AddError(flightGroup, "INVALID_PDF", "PDF could not be read.", details: ex.Message);
+                return flightGroup;
+            }
 
             foreach (var page in pages)
             {
@@ -25,9 +35,17 @@ namespace PdfExtractor.Services
                 {
                     var flight = _ofpParser.Parse(page.Text);
                     flightGroup.Flights.Add(flight);
+                    CheckOfpFields(flightGroup, flight, page.PageNumber);
                 }
             }
 
+            if (flightGroup.Flights.Count == 0)
+            {
+                AddError(flightGroup, "NO_FLIGHTS_FOUND", "PDF contains no OFP pages.");
+                return flightGroup;
+            }
+
+            var flightsWithBriefing = new List<Flight>();
 
             foreach (var page in pages)
             {
@@ -58,17 +76,16 @@ namespace PdfExtractor.Services
 
                 if (flight == null)
                 {
-                    flightGroup.Errors.Add(new ExtractionError
-                    {
-                        Code = "CREW_BRIEFING_FLIGHT_NOT_FOUND",
-                        Message = "Crew briefing page has no matching OFP flight.",
-                        PageNumber = page.PageNumber
-                    });
+                    AddFlightNotFoundError(flightGroup, page.PageNumber);
                     continue;
                 }
 
                 _crewBriefingParser.Parse(page.Text, flight);
+                CheckCrewBriefingFields(flightGroup, flight, page.PageNumber);
+                flightsWithBriefing.Add(flight);
             }
+
+            AddMissingCrewBriefingErrors(flightGroup, flightsWithBriefing);
 
 
             foreach (var flight in flightGroup.Flights)
@@ -118,6 +135,83 @@ namespace PdfExtractor.Services
 
 
             return flightGroup;
+        }
+
+        // Required OFP fields that could not be read
+        private static void CheckOfpFields(FlightGroup flightGroup, Flight flight, int pageNumber)
+        {
+            if (flight.FlightNumber == null) AddMissingFieldError(flightGroup, "FlightNumber", flight, pageNumber);
+            if (flight.FlightDate == null) AddMissingFieldError(flightGroup, "FlightDate", flight, pageNumber);
+            if (flight.AircraftRegistration == null) AddMissingFieldError(flightGroup, "AircraftRegistration", flight, pageNumber);
+            if (flight.AtcCallSign == null) AddMissingFieldError(flightGroup, "AtcCallSign", flight, pageNumber);
+            if (flight.DepartureAirport == null) AddMissingFieldError(flightGroup, "DepartureAirport", flight, pageNumber);
+            if (flight.ArrivalAirport == null) AddMissingFieldError(flightGroup, "ArrivalAirport", flight, pageNumber);
+        }
+
+        // Crew briefing data that could not be read
+        private static void CheckCrewBriefingFields(FlightGroup flightGroup, Flight flight, int pageNumber)
+        {
+            if (flight.BusinessPassengers == null) AddMissingFieldError(flightGroup, "Passengers", flight, pageNumber);
+            if (flight.DryOperatingWeightKg == null) AddMissingFieldError(flightGroup, "DryOperatingWeightKg", flight, pageNumber);
+            if (flight.DryOperatingIndex == null) AddMissingFieldError(flightGroup, "DryOperatingIndex", flight, pageNumber);
+            if (flight.CrewMembers.Count == 0) AddMissingFieldError(flightGroup, "CrewMembers", flight, pageNumber);
+        }
+
+        private static void AddMissingFieldError(FlightGroup flightGroup, string fieldName, Flight flight, int pageNumber)
+        {
+            AddError(
+                flightGroup,
+                "MISSING_FIELD",
+                $"Field {fieldName} could not be read.",
+                pageNumber,
+                flight.FlightNumber,
+                fieldName);
+        }
+
+        private static void AddError(
+            FlightGroup flightGroup,
+            string code,
+            string message,
+            int? pageNumber = null,
+            string? flightNumber = null,
+            string? fieldName = null,
+            string? details = null)
+        {
+            flightGroup.Errors.Add(new ExtractionError
+            {
+                Code = code,
+                Message = message,
+                PageNumber = pageNumber,
+                FlightNumber = flightNumber,
+                FieldName = fieldName,
+                Details = details
+            });
+        }
+
+        // Crew briefing page without a matching OFP flight
+        private static void AddFlightNotFoundError(FlightGroup flightGroup, int pageNumber)
+        {
+            AddError(
+                flightGroup,
+                "CREW_BRIEFING_FLIGHT_NOT_FOUND",
+                "Crew briefing page has no matching OFP flight.",
+                pageNumber);
+        }
+
+        // OFP flight without a crew briefing page
+        private static void AddMissingCrewBriefingErrors(FlightGroup flightGroup, List<Flight> flightsWithBriefing)
+        {
+            foreach (var flight in flightGroup.Flights)
+            {
+                if (flightsWithBriefing.Contains(flight))
+                    continue;
+
+                AddError(
+                    flightGroup,
+                    "CREW_BRIEFING_MISSING",
+                    "Flight has no matching crew briefing page.",
+                    flightNumber: flight.FlightNumber);
+            }
         }
     }
 }

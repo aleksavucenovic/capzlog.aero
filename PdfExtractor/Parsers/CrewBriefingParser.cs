@@ -57,7 +57,7 @@ namespace PdfExtractor.Parsers
                 Console.WriteLine($"Date: {f.FlightDate:yyyy-MM-dd} == {date:yyyy-MM-dd} -> {f.FlightDate == date}");
             }
 
-            return flights.SingleOrDefault(f =>
+            return flights.FirstOrDefault(f =>
                 f.FlightNumber == flightNumber &&
                 f.AtcCallSign == atcCallSign &&
                 f.AircraftRegistration == registration &&
