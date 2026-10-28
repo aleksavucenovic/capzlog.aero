@@ -139,10 +139,7 @@ namespace PdfExtractor.Utils
             );
 
             if (!startMatch.Success)
-            {
-                Console.WriteLine("ERROR: Crew table header not found.");
                 return members;
-            }
 
             var startIndex = startMatch.Index + startMatch.Length;
 
@@ -160,9 +157,6 @@ namespace PdfExtractor.Utils
                 startIndex,
                 endIndex - startIndex
             );
-
-            Console.WriteLine("\n--- CREW SECTION ---");
-            Console.WriteLine(crewText);
 
             CrewMember? currentMember = null;
 
@@ -236,17 +230,6 @@ namespace PdfExtractor.Utils
                 currentMember.FullName = string.IsNullOrEmpty(currentMember.FullName)
                     ? line
                     : currentMember.FullName + " " + line;
-            }
-
-            Console.WriteLine("\n========== EXTRACTED CREW ==========");
-            Console.WriteLine($"Total crew members: {members.Count}");
-
-            foreach (var member in members)
-            {
-                Console.WriteLine(
-                    $"{member.FunctionCode} | {member.ThreeLetterCode} | " +
-                    $"{member.FullName} | {member.Role ?? "N/A"}"
-                );
             }
 
             return members;

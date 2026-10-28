@@ -48,15 +48,6 @@ namespace PdfExtractor.Parsers
                 return null;
             }
 
-            foreach (var f in flights)
-            {
-                Console.WriteLine($"\nChecking flight: {f.FlightNumber}");
-                Console.WriteLine($"FlightNumber: {f.FlightNumber} == {flightNumber} -> {f.FlightNumber == flightNumber}");
-                Console.WriteLine($"ATC: {f.AtcCallSign} == {atcCallSign} -> {f.AtcCallSign == atcCallSign}");
-                Console.WriteLine($"Registration: {f.AircraftRegistration} == {registration} -> {f.AircraftRegistration == registration}");
-                Console.WriteLine($"Date: {f.FlightDate:yyyy-MM-dd} == {date:yyyy-MM-dd} -> {f.FlightDate == date}");
-            }
-
             return flights.FirstOrDefault(f =>
                 f.FlightNumber == flightNumber &&
                 f.AtcCallSign == atcCallSign &&
@@ -102,11 +93,6 @@ namespace PdfExtractor.Parsers
                     flight.DryOperatingIndex = index;
                 }
             }
-            else
-            {
-                Console.WriteLine("WARNING: DOW and DOI not found.");
-            }
-
 
             flight.CrewMembers = Helper.ExtractCrewMembers(pageText);
         }
