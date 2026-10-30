@@ -12,6 +12,11 @@ Repo: `https://github.com/aleksavucenovic/capzlog.aero.git`
 - Crew briefing/members
 - Extraction errors
 
+## PDF processing
+
+The project uses PdfPig to read PDF pages and extract text.
+Link: `https://uglytoad.github.io/PdfPig/`
+
 ## Instructions
 
 Requires the .NET 10 SDK.
